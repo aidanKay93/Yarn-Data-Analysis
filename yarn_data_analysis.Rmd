@@ -1,0 +1,86 @@
+---
+title: 'Yarn Data Analysis'
+author: "Aidan Kay"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+yarn <- read.csv("yarn.csv")
+```
+
+
+
+In this data analysis, I will be diving into the `yarn` dataset. This dataset looks at many different yarns, and it includes several physical characteristics and classifications of the yarns, while also including whether or not the yarn has been discontinued and a rating system. In this dataset, the yarn's rating system is the most compelling component to me, and I want to look into this variable further. My question is: 'Is there any trend between the average rating and certain characteristics of yarn represented in the dataset?' 
+
+To start, let's see some summary statistics of `rating_average`.
+
+```{r}
+summary_stats <- yarn %>%
+  summarize(Average_Rating = mean(rating_average, na.rm = TRUE),
+            Median_Rating = median(rating_average, na.rm = TRUE),
+            Max_Rating = max(rating_average, na.rm = TRUE),
+            Min_Rating = min(rating_average, na.rm = TRUE))
+
+knitr::kable(summary_stats)
+```
+
+Here, we see that the scale for ratings is from 1 to 5, as these are the maximum and minimum scores. We also see the average and median ratings for the yarn. Overall, I would say this mean and medium is high, as they are close to the maximum score of 5. Note I did remove yarns that were not rated since there are very few, and I will continue to do so for the other figures in this analysis.
+
+Now, let's look at some correlations.
+
+
+
+```{r message=FALSE, warning=FALSE}
+yarn8 <- yarn %>%
+  filter(!is.na(yarn_weight_knit_gauge),
+         gauge_divisor == 4) %>%
+  group_by(yarn_weight_knit_gauge) %>%
+  summarize(avg_rate = mean(rating_average, na.rm = TRUE)) 
+
+yarn8$yarn_weight_knit_gauge <- fct_relevel(yarn8$yarn_weight_knit_gauge, "0-6", "7-12")
+
+ggplot(yarn8, aes(x = yarn_weight_knit_gauge, y = avg_rate)) +
+  geom_col(fill = "lightblue") +
+  theme_minimal() +
+  labs(title = "Knit Gauge vs Average Rating", x = "Yarn Weight Knit Gauge", y = "Average Rating (1-5)")
+
+```
+
+Here we see a positive correlation between a yarn's weight knit gauge and its rating. While it may seem that these ratings are high, remember that the median rating was also quite high at 4.6.
+
+-  `yarn_weight_knit_gauge` is representing is the amount of stitches made with the yarn that make up 4 inches of material (note that I only used rows with a gauge divisor of 4 to account for this). These are divided by yarn weights #0 through #7, with weight #7 having the lowest gauge interval (0-6), and #0 having the highest gauge interval (32-34)^[Source: https://blog.nobleknits.com/yarn-weights-comparison-chart]. So, yarns with a lighter weight can be stitched more times. Yarn weight refers to the yarn's thickness, so yarns with a lighter weight are thinner^[Source: https://www.thesprucecrafts.com/understanding-yarn-weights-2117311]. As one would expect, thinner yarns would be able to be stitched more times per inch(es). 
+
+- Based on this bar chart, it's clear that yarns with lower weight, and thus higher knit gauge, yield higher ratings. Higher gauge means that the final product will be denser, and thus greater durability and warmth, because the knit will be tighter^[Source: https://www.jetandbo.com/blogs/all-about-cashmere/cashmere-ply-and-gauge-explained]. This is possibly why lighter yarns score better ratings. 
+
+
+
+
+
+
+
+```{r message=FALSE, warning=FALSE}
+yarn9 <- yarn %>%
+  filter(!is.na(yarn_weight_ply)) %>%
+  group_by(yarn_weight_ply) %>%
+  summarize(avg_rate = mean(rating_average, na.rm = TRUE))
+
+ggplot(yarn9, aes(x = yarn_weight_ply, y = avg_rate)) +
+  geom_point() +
+  geom_smooth(method =lm, se = FALSE) +
+  theme_minimal() +
+  labs(title = "Weight Ply vs Average Rating", x = "Yarn Weight Ply", y = "Average Rating (1-5)")
+
+
+```
+
+Here we see a negative correlation between a yarn's weight ply and its rating. 
+
+- `yarn_weight_ply` is representing the yarn's typical ply for its weight. Ply is defined as the number of individual strings that wrap to create the strand of yarn^[Source: https://blog.treasurie.com/yarn-ply/]. It is apparent that yarns of greater weight ply yield lower ratings on average. Higher plies generally yield a greater weight^[Source: https://blog.treasurie.com/yarn-ply/], and as we saw, yarns of greater weight rate lower on average. This is in support with my previous finding. Additionally, yarns of greater ply are more difficult to work with^[Source: https://blog.treasurie.com/yarn-ply/], which may be why we see this pattern.
+
+- One discrepancy I find is that higher ply yarns have significant benefits, such as being stronger^[Source: https://knitnyarn.com.au/blogs/news/74018756-yarn-weight-and-ply]. However, it is unclear what the rating system of this dataset is based on. If other factors, like workability, or the benefits of lighter yarn are more significantly considered in rating, then it would make sense that higher plies would be rated lower. 
+
+
+
+
+In this paper I have shown how a yarn's rating is negatively correlated to its weight, and have looked at certain characteristics of weight to see why this may be the case. While I am not certain why this is the case, I have given possible reasons as to why this may be the case, like benefits of lower weight yarns and possible factor preferences in the rating system.
